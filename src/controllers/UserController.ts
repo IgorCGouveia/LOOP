@@ -9,3 +9,8 @@ export async function CreateUser(req:FastifyRequest<{Body: Prisma.UserCreateInpu
     const newUser = await prisma.user.create({data: dado});
     return res.status(201).send(newUser);
 }
+
+export  async function Read(req:FastifyRequest, res:FastifyReply){
+    const users = await prisma.user.findMany();
+    return res.status(200).send(users);
+}
