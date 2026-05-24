@@ -1,15 +1,18 @@
 import { FastifyInstance } from "fastify";
-import { CreateUser, deleteUser, Read, update } from '../controllers/UserController';
+import UserController from "../controllers/UserController";
+
+const userController = new UserController();
 
 export async function userRoutes(server: FastifyInstance){
 
 
-    server.post("/users", CreateUser);
 
-    server.get("/users", Read);
+    server.post("/users", userController.CreateUser);
 
-    server.put("/users/:id", update);
+    server.get("/users", userController.Read);
 
-    server.delete("/users/:id",deleteUser);
+    server.put("/users/:id", userController.update);
+
+    server.delete("/users/:id",userController.delUser);
 }
 
