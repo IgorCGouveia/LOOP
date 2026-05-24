@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { CreateUser, Read, update } from '../controllers/UserController';
+import { CreateUser, deleteUser, Read, update } from '../controllers/UserController';
 
 export async function userRoutes(server: FastifyInstance){
 
@@ -9,5 +9,7 @@ export async function userRoutes(server: FastifyInstance){
     server.get("/users", Read);
 
     server.put("/users/:id", update);
+
+    server.delete("/users/:id",deleteUser);
 }
 
