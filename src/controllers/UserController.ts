@@ -1,8 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import { DiffieHellmanGroup } from "node:crypto";
-
-const prisma = new PrismaClient();
+import { prisma } from "../app";
 
 export default class UserController{
 
