@@ -1,16 +1,25 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { Prisma, PrismaClient } from "../generated/prisma/client";
-import { DiffieHellmanGroup } from "node:crypto";
+import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../app";
+import { CreateUserSchema } from "../schema/userVal";
+import * as userService from "../services/userServices"
+
 
 export default class UserController{
 
     constructor(){}
 
-    async CreateUser(req:FastifyRequest<{Body: Prisma.UserCreateInput}>, res:FastifyReply){
-        const dados = req.body;
-        const newUser = await prisma.user.create({data: dados})
-        return res.status(201).send(newUser);
+    async CreateUser(req:FastifyRequest, res:FastifyReply){
+        // const dados = req.body;
+        // const newUser = await prisma.user.create({data: dados})
+        // return res.status(201).send(newUser);
+        //valida as entradas com o zod
+        const data = CreateUserSchema.parse(req.body);
+
+        //vai chamar o service para criar um usuario
+        const Newuser = userService.createuser(data);
+
+        return res.status(201).send(Newuser)
     }
     async Read(req:FastifyRequest, res:FastifyReply){
         const users = await prisma.user.findMany();

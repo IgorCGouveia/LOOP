@@ -16,3 +16,8 @@ export const CreateUserSchema = z.object({
     (data) =>   data.confirmPassword == data.password,
     "As senhas não coincidem"
 );
+
+export const UpdateUserSchema = CreateUserSchema.partial()
+
+export type CreateUserInput = z.infer<typeof CreateUserSchema>;
+export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
