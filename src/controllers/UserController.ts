@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { Prisma } from "../generated/prisma/client";
 import { prisma } from "../app";
-import { CreateUserSchema } from "../schema/userVal";
+import { CreateUserSchema, UpdateUserSchema } from "../schema/userVal";
 import * as userService from "../services/userServices"
 
 
@@ -19,22 +19,49 @@ export default class UserController{
         //vai chamar o service para criar um usuario
         const Newuser = userService.createuser(data);
 
-        return res.status(201).send(Newuser)
+        return res.status(201).send(Newuser);
     }
-    async Read(req:FastifyRequest, res:FastifyReply){
-        const users = await prisma.user.findMany();
+
+
+
+
+
+    async GetAll(req:FastifyRequest, res:FastifyReply){
+        const users = await userService.getAllusers();
         return res.status(200).send(users);
     
     }
-    async update(req:FastifyRequest<{Params: {id:string}, Body:Prisma.UserUpdateInput }>, res:FastifyReply){
-        const {id } = req.params;
-        const dados = req.body;
-        const userATT = await prisma.user.update({where: {id: Number(id)}, data: dados});
-        return res.status(200).send(userATT);
+
+
+
+
+
+    async update(req:FastifyRequest, res:FastifyReply){
+        // const {id } = req.params;
+        // const dados = req.body;
+        // const userATT = await prisma.user.update({where: {id: Number(id)}, data: dados});
+        // return res.status(200).send(userATT);
+
+        const { id } = req.params as {id: string};
+        
+        const data = UpdateUserSchema.parse(req.body);
+
+        if( Object.keys(data).length == 0){
+            return res.status(400).send("Nenhum dado para atualizar foi fornecido");
+        }
+
+        const userUp = await userService.updateUser(id, data);
+
+        return res.status(200).send(userUp);
     }
 
-    async delUser(req:FastifyRequest<{Params: {id:string}}>, res:FastifyReply){
-        const {id} = req.params;
+
+
+
+
+
+    async delUser(req:FastifyRequest, res:FastifyReply){
+        const {id} = req.params as {id: string};
         const deletado = await prisma.user.delete({where: {id: Number(id)}});
         return res.status(200).send(deletado); 
     }
