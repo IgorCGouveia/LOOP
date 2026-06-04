@@ -20,7 +20,9 @@ export async function createuser(data: CreateUserInput){
             },
         });
         return user;
-    }catch{}
+    }catch(err){
+        throw err;
+    }
 }
 
 export async function getAllusers(){
@@ -31,13 +33,23 @@ export async function getAllusers(){
 }
 
 export async function updateUser(id: string, data: UpdateUserInput){
+    const payload: any = {};
+    if(data.name !== undefined) payload.name = data.name;
+    if(data.email !== undefined) payload.email = data.email;
+    if(data.password !== undefined){
+        payload.password = await argon2.hash(data.password, {
+            type: argon2.argon2id,
+            memoryCost: 2**16,
+            timeCost: 3,
+            parallelism: 1,
+
+        });
+    }
+    
+    
     const user = await prisma.user.update({
         where: {id},
-        data: {
-            name: data.name,
-            email: data.email,
-            password: data.password,
-        }
+        data: payload,
     });
     return user;
 }
@@ -45,8 +57,8 @@ export async function updateUser(id: string, data: UpdateUserInput){
 
 
 export async function delUser(id: string){
-    await prisma.user.delete({
+    const deleted = await prisma.user.delete({
         where: { id },
     });
-
+    return deleted;
 }

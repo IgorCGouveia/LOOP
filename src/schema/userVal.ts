@@ -7,7 +7,9 @@ export const CreateUserSchema = z.object({
     email: z.email({message: 'Formato de email inválido.'}),
     password: z
         .string()
-        .min(8),
+        .min(8)
+        .max(128),
+        
     confirmPassword:z
         .string()
         .min(8),

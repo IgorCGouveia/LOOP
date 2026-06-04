@@ -16,7 +16,7 @@ export default class UserController{
         const data = CreateUserSchema.parse(req.body);
 
         //vai chamar o service para criar um usuario
-        const Newuser = userService.createuser(data);
+        const Newuser = await userService.createuser(data);
 
         return res.status(201).send(Newuser);
     }
