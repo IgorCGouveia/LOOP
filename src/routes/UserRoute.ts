@@ -9,7 +9,7 @@ export async function userRoutes(server: FastifyInstance){
 
     server.post("/users", userController.CreateUser);
 
-    server.get("/users", userController.Read);
+    server.get("/users", userController.GetAll);
 
     server.put("/users/:id", userController.update);
 

@@ -3,7 +3,7 @@ import { prisma } from "../app";
 import { CreateUserInput, UpdateUserInput } from "../schema/userVal";
 
 
-export async function createuser(data: CreateUserInput){
+export async function createUser(data: CreateUserInput){
     try{
         const hash = await argon2.hash(data.password, {
             type: argon2.argon2id,
@@ -18,6 +18,7 @@ export async function createuser(data: CreateUserInput){
                 email: data.email,
                 password: hash,
             },
+            select: {id: true, email: true, name: true, role: true}
         });
         return user;
     }catch(err){
@@ -27,7 +28,8 @@ export async function createuser(data: CreateUserInput){
 
 export async function getAllusers(){
     const users = await prisma.user.findMany({
-        orderBy: { id: "asc" }
+        orderBy: { id: "asc" },
+        select: {id: true, email: true, name: true, role: true},
     });
     return users;
 }
@@ -50,6 +52,7 @@ export async function updateUser(id: string, data: UpdateUserInput){
     const user = await prisma.user.update({
         where: {id},
         data: payload,
+        select: {id: true, email: true, name: true, role: true}
     });
     return user;
 }
@@ -59,6 +62,7 @@ export async function updateUser(id: string, data: UpdateUserInput){
 export async function delUser(id: string){
     const deleted = await prisma.user.delete({
         where: { id },
+        select: {id: true, email: true, name: true, role: true}
     });
     return deleted;
 }
