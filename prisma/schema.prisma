@@ -18,11 +18,28 @@ model User {
   id      String   @id @default(cuid())
   email   String @unique
   password String 
-  name    String?
+  name    String
   role    Role @default(USER)
+
+
+  habits  Habit[]
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+
+model Habit {
+  id         String    @id @default(cuid())
+  name       String
+  description     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId          String
+  user            User @relation(fields: [userId], references: [id])
+
 }

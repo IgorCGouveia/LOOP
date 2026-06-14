@@ -4,11 +4,11 @@ import { CreateUserVal, UpdateUserVal } from "../schema/userVal";
 import * as userService from "../services/userServices"
 
 
-export default class UserController{
+export default class HabitController{
 
     constructor(){}
 
-    async CreateUser(req:FastifyRequest, res:FastifyReply){
+    async CreateHabit(req:FastifyRequest, res:FastifyReply){
         // const dados = req.body;
         // const newUser = await prisma.user.create({data: dados})
         // return res.status(201).send(newUser);

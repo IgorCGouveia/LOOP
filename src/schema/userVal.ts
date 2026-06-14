@@ -1,6 +1,6 @@
 import {z} from 'zod';
 
-export const CreateUserSchema = z.object({
+export const CreateUserVal = z.object({
     name: z.string()
         .min(3, 'Nome é obrigatório')
         .max(50, 'Maximo 50 caracteres'),
@@ -19,7 +19,7 @@ export const CreateUserSchema = z.object({
     "As senhas não coincidem"
 );
 
-export const UpdateUserSchema = CreateUserSchema.partial()
+export const UpdateUserVal = CreateUserVal.partial()
 
-export type CreateUserInput = z.infer<typeof CreateUserSchema>;
-export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+export type CreateUserInput = z.infer<typeof CreateUserVal>;
+export type UpdateUserInput = z.infer<typeof UpdateUserVal>;
