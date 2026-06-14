@@ -12,6 +12,16 @@ async function ensureUserExists(userId: string)
     return exist;
 }
 
+async function ensureHabitExists(id: string){
+    const exist = await prisma.habit.findUnique({where: {id}})
+    if(!exist){
+        throw new Error("Hábito não encontrado.");
+
+    }
+    return exist;
+
+}
+
 export async function CreateHabit(data: CreateHabitInput)
 {
     await ensureUserExists(data.userId);
@@ -47,4 +57,24 @@ export async function GetAllHabits(){
     });
 
     return habits;
+}
+
+export async function UpdateHabit(id: string,data: UpdateHabitInput){
+
+    await ensureHabitExists(id);
+
+    const updated = await prisma.habit.update({where: {id}, data})
+
+    return updated;
+
+}
+
+
+export async function DeleteHabit(id: string){
+
+    await ensureHabitExists(id);
+
+    const deleted = await prisma.habit.delete({where: {id}})
+
+    return deleted;
 }

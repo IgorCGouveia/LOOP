@@ -13,8 +13,8 @@ export async function habitRoutes(server: FastifyInstance){
 
     server.get("/habits", habitController.GetAllHabits);
 
-    // server.put("/users/:id", userController.update);
+    server.put("/habits/:id", habitController.UpdateHabit);
 
-    // server.delete("/users/:id",userController.delUser);
+    server.delete("/habits/:id",habitController.DeleteHabit);
 }
 

@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../app";
 import * as habitService from "../services/habitServices"
-import { CreateHabitVal } from "../schema/habitVal";
+import { CreateHabitVal, UpdateHabitVal } from "../schema/habitVal";
 
 
 export default class HabitController{
@@ -41,26 +41,29 @@ export default class HabitController{
     }
 
 
+    async UpdateHabit(req:FastifyRequest, res: FastifyReply){
+        const {id} = req.params as {id:string};
+        const data = UpdateHabitVal.parse(req.body);
+        if(Object.keys(data).length == 0){
+            return res.status(400).send("Nenhum dado para atualizar foi fornecido.");
+
+        }
+        const habitUpdate = await habitService.UpdateHabit(id, data)
+        return res.status(200).send({
+            message: "Dados atualizado",
+            data: habitUpdate
+        })
+    }
 
 
-            // async update(req:FastifyRequest, res:FastifyReply){
-            //     // const {id } = req.params;
-            //     // const dados = req.body;
-            //     // const userATT = await prisma.user.update({where: {id: Number(id)}, data: dados});
-            //     // return res.status(200).send(userATT);
-
-            //     const { id } = req.params as {id: string};
-                
-            //     const data = UpdateUserVal.parse(req.body);
-
-            //     if( Object.keys(data).length == 0){
-            //         return res.status(400).send("Nenhum dado para atualizar foi fornecido");
-            //     }
-
-            //     const userUp = await userService.updateUser(id, data);
-
-            //     return res.status(200).send(userUp);
-            // }
+    async DeleteHabit(req: FastifyRequest, res: FastifyReply){
+        const {id} = req.params as {id: string};
+        const deleted = await habitService.DeleteHabit(id);
+        return res.status(200).send({
+            message: "Hábito apagado",
+            data: deleted
+        })
+    }
 
 
 
