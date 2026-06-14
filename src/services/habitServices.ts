@@ -25,3 +25,16 @@ export async function CreateHabit(data: CreateHabitInput)
 
     return habit;
 }
+
+export async function GetAllHabitsFromUser(userId: string){
+
+    await ensureUserExists(userId);
+    
+    const habits = await prisma.habit.findMany({
+        where: {userId: userId},
+        orderBy: {name: 'asc'},
+
+    });
+
+    return habits;
+}

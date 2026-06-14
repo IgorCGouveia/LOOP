@@ -9,7 +9,7 @@ export async function habitRoutes(server: FastifyInstance){
 
     server.post("/habits", habitController.CreateHabit);
 
-    // server.get("/users", userController.GetAll);
+    server.get("/users/:userId/habits", habitController.GetAllFromUser);
 
     // server.put("/users/:id", userController.update);
 

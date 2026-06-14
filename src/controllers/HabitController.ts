@@ -25,11 +25,12 @@ export default class HabitController{
 
 
 
-            // async GetAll(req:FastifyRequest, res:FastifyReply){
-            //     const users = await userService.getAllusers();
-            //     return res.status(200).send(users);
+            async GetAllFromUser(req:FastifyRequest, res:FastifyReply){
+                const {userId} = req.params as {userId:string};
+                const habits = await habitService.GetAllHabitsFromUser(userId);
+                return res.status(200).send(habits);
             
-            // }
+             }
 
 
 
