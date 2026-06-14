@@ -1,18 +1,18 @@
 import { FastifyInstance } from "fastify";
-import UserController from "../controllers/UserController";
+import HabitController from "../controllers/HabitController";
 
-const userController = new UserController();
+const habitController = new HabitController();
 
-export async function userRoutes(server: FastifyInstance){
+export async function habitRoutes(server: FastifyInstance){
 
 
 
-    server.post("/users", userController.CreateUser);
+    server.post("/habits", habitController.CreateHabit);
 
-    server.get("/users", userController.GetAll);
+    // server.get("/users", userController.GetAll);
 
-    server.put("/users/:id", userController.update);
+    // server.put("/users/:id", userController.update);
 
-    server.delete("/users/:id",userController.delUser);
+    // server.delete("/users/:id",userController.delUser);
 }
 

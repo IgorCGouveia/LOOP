@@ -19,7 +19,12 @@ export const CreateUserVal = z.object({
     "As senhas não coincidem"
 );
 
-export const UpdateUserVal = CreateUserVal.partial()
+export const UpdateUserVal = z.object(CreateUserVal.shape)
+.partial()
+.refine(
+    (data) =>   data.confirmPassword == data.password,
+    "As senhas não coincidem"
+);
 
 export type CreateUserInput = z.infer<typeof CreateUserVal>;
 export type UpdateUserInput = z.infer<typeof UpdateUserVal>;

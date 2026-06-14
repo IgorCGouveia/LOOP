@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id      String   @id @default(cuid())
+  id      String   @id @default(cuid(2))
   email   String @unique
   password String 
   name    String
@@ -32,7 +32,7 @@ enum Role {
 
 
 model Habit {
-  id         String    @id @default(cuid())
+  id         String    @id @default(cuid(2))
   name       String
   description     String?
 
