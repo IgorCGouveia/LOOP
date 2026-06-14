@@ -65,4 +65,14 @@ export async function delUser(id: string){
         select: {id: true, email: true, name: true, role: true}
     });
     return deleted;
+
+    //se nao usasse o onDelete: Cascade no schema do banco de dados ficaria assim:
+    // await prisma.$transaction([ <- garante consistencia para várias operações atomicas no banco
+    //     prisma.habit.deleteMany({
+    //         where: {userId: id},
+    //     }),
+    //     prisma.user.delete({
+    //         where: {id: id}
+    //     })
+    // ])
 }

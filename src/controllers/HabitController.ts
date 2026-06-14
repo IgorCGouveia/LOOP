@@ -25,13 +25,20 @@ export default class HabitController{
 
 
 
-            async GetAllFromUser(req:FastifyRequest, res:FastifyReply){
-                const {userId} = req.params as {userId:string};
-                const habits = await habitService.GetAllHabitsFromUser(userId);
-                return res.status(200).send(habits);
-            
-             }
+    async GetAllFromUser(req:FastifyRequest, res:FastifyReply){
+        const {userId} = req.params as {userId:string};
+        const habits = await habitService.GetAllHabitsFromUser(userId);
+        return res.status(200).send(habits);
+    
+        }
 
+    
+
+    async GetAllHabits(req: FastifyRequest, res:FastifyReply){
+
+        const habits = await habitService.GetAllHabits();
+        return res.status(200).send(habits);
+    }
 
 
 

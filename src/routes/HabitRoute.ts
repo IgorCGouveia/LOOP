@@ -11,6 +11,8 @@ export async function habitRoutes(server: FastifyInstance){
 
     server.get("/users/:userId/habits", habitController.GetAllFromUser);
 
+    server.get("/habits", habitController.GetAllHabits);
+
     // server.put("/users/:id", userController.update);
 
     // server.delete("/users/:id",userController.delUser);

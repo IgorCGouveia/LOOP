@@ -1,3 +1,4 @@
+import prismaConfig from '../../prisma.config';
 import {prisma } from '../app';
 import {CreateHabitInput, UpdateHabitInput} from  '../schema/habitVal'
 
@@ -34,6 +35,15 @@ export async function GetAllHabitsFromUser(userId: string){
         where: {userId: userId},
         orderBy: {name: 'asc'},
 
+    });
+
+    return habits;
+}
+
+export async function GetAllHabits(){
+
+    const habits = await prisma.habit.findMany({
+        orderBy:{ name: 'asc'}
     });
 
     return habits;

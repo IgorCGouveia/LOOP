@@ -61,7 +61,7 @@ export default class UserController{
 
     async delUser(req:FastifyRequest, res:FastifyReply){
         const {id} = req.params as {id: string};
-        const deletado = await prisma.user.delete({where: {id: Number(id)}});
+        const deletado = await prisma.user.delete({where: {id: id}});
         return res.status(200).send(deletado); 
     }
 }
