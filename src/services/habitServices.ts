@@ -1,4 +1,3 @@
-import prismaConfig from '../../prisma.config';
 import {prisma } from '../app';
 import {CreateHabitInput, UpdateHabitInput} from  '../schema/habitVal'
 

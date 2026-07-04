@@ -13,8 +13,11 @@ export default class UserController{
         // const newUser = await prisma.user.create({data: dados})
         // return res.status(201).send(newUser);
         //valida as entradas com o zod
-        const data = CreateUserVal.parse(req.body);
 
+        
+        //const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body; tinha virgula no final do body.
+        const data = CreateUserVal.parse(req.body);
+        
         //vai chamar o service para criar um usuario
         const NewUser = await userService.createUser(data);
 

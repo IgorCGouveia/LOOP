@@ -3,6 +3,7 @@ import Fastify from "fastify"
 import {userRoutes} from './routes/UserRoute';
 import { PrismaClient } from './generated/prisma/client';
 import { habitRoutes } from './routes/HabitRoute';
+import { LoginRoute } from './routes/indexRoute';
 
 //inicia o fastify com logging
 export const server = Fastify({
@@ -16,6 +17,7 @@ export const prisma = new PrismaClient();
 
 server.register(userRoutes);
 server.register(habitRoutes);
+server.register(LoginRoute)
 
 server.listen({port: 3333}).then(() => {
     console.log("Server está rodando na porta 3333")

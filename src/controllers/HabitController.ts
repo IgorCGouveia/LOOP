@@ -1,5 +1,4 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { prisma } from "../app";
 import * as habitService from "../services/habitServices"
 import { CreateHabitVal, UpdateHabitVal } from "../schema/habitVal";
 
@@ -13,7 +12,12 @@ export default class HabitController{
         // const newUser = await prisma.user.create({data: dados})
         // return res.status(201).send(newUser);
         //valida as entradas com o zod
-        const data = CreateHabitVal.parse(req.body);
+        const userId = req.user.id;
+        const data = CreateHabitVal.parse({
+            name: (req.body as { name: string}).name,
+            description: (req.body as {description? : string}).description,
+            userId,
+        });
 
         //vai chamar o service para criar um usuario
         const NewHabit = await habitService.CreateHabit(data);
@@ -27,21 +31,35 @@ export default class HabitController{
 
     async GetAllFromUser(req:FastifyRequest, res:FastifyReply){
         const {userId} = req.params as {userId:string};
-        const habits = await habitService.GetAllHabitsFromUser(userId);
-        return res.status(200).send(habits);
-    
+
+        if(req.user.role === "ADMIN" || req.user.id === userId){
+            
+            const habits = await habitService.GetAllHabitsFromUser(userId);
+            return res.status(200).send(habits);
+        }else{
+            return res.status(403).send("Você não tem permissão para ver os hábitos de outra pessoa.")
+        }
         }
 
     
 
     async GetAllHabits(req: FastifyRequest, res:FastifyReply){
+        
+        if(req.user.role === "ADMIN"){
 
         const habits = await habitService.GetAllHabits();
         return res.status(200).send(habits);
+
+        }
+        return res.status(403).send("Você não tem permissão para ver os hábitos de outra pessoa.")
     }
 
 
     async UpdateHabit(req:FastifyRequest, res: FastifyReply){
+
+        const {userId} = req.params as {userId:string};
+
+        if(req.user.id === userId){
         const {id} = req.params as {id:string};
         const data = UpdateHabitVal.parse(req.body);
         if(Object.keys(data).length == 0){
@@ -53,16 +71,29 @@ export default class HabitController{
             message: "Dados atualizado",
             data: habitUpdate
         })
+        }
+
+        return res.status(403).send("Você não tem permissão para mudar os hábitos de outra pessoa.")
+
     }
 
 
     async DeleteHabit(req: FastifyRequest, res: FastifyReply){
+        
+        const {userId} = req.params as {userId:string};
+
+        if(req.user.id === userId){
         const {id} = req.params as {id: string};
         const deleted = await habitService.DeleteHabit(id);
         return res.status(200).send({
             message: "Hábito apagado",
             data: deleted
         })
+        }
+
+        return res.status(403).send("Você não tem permissão para mudar os hábitos de outra pessoa.")
+
+        
     }
 
 
