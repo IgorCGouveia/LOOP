@@ -31,7 +31,16 @@ export default class UserController{
     async GetAll(req:FastifyRequest, res:FastifyReply){
         const users = await userService.getAllusers();
         return res.status(200).send(users);
-    
+    }
+
+    async GetMe(req:FastifyRequest, res:FastifyReply){
+        const user = await userService.getUserById(req.user.id);
+
+        if(!user){
+            return res.status(404).send("Usuário não encontrado");
+        }
+
+        return res.status(200).send(user);
     }
 
 

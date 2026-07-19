@@ -21,6 +21,14 @@ async function ensureHabitExists(id: string){
 
 }
 
+async function ensureHabitOwnedByUser(habitId: string, userId: string) {
+    const habit = await ensureHabitExists(habitId);
+    if (habit.userId !== userId) {
+        throw new Error("Você não tem permissão para alterar este hábito.");
+    }
+    return habit;
+}
+
 export async function CreateHabit(data: CreateHabitInput)
 {
     await ensureUserExists(data.userId);
@@ -76,4 +84,27 @@ export async function DeleteHabit(id: string){
     const deleted = await prisma.habit.delete({where: {id}})
 
     return deleted;
+}
+
+export async function GetHabitLogs(habitId: string, userId: string) {
+    await ensureHabitOwnedByUser(habitId, userId);
+
+    const habitLogClient = prisma as any;
+
+    const logs = await habitLogClient.habitLog.findMany({
+        where: { habitId, userId },
+        orderBy: { completedAt: 'desc' },
+        select: {
+            id: true,
+            habitId: true,
+            userId: true,
+            completedAt: true,
+        },
+    });
+
+    return logs;
+}
+
+export async function ensureHabitCanBeEdited(habitId: string, userId: string) {
+    return ensureHabitOwnedByUser(habitId, userId);
 }

@@ -34,6 +34,15 @@ export async function getAllusers(){
     return users;
 }
 
+export async function getUserById(id: string){
+    const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, email: true, name: true, role: true },
+    });
+
+    return user;
+}
+
 export async function updateUser(id: string, data: UpdateUserInput){
     const payload: any = {};
     if(data.name !== undefined) payload.name = data.name;

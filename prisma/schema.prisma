@@ -23,6 +23,7 @@ model User {
 
 
   habits  Habit[]
+  habitLogs HabitLog[]
 }
 
 enum Role {
@@ -41,5 +42,19 @@ model Habit {
 
   userId          String
   user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  habitLogs HabitLog[]
+
+}
+
+model HabitLog {
+  id          String   @id @default(cuid(2))
+  completedAt DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  habitId     String
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
 
 }

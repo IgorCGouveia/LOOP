@@ -10,6 +10,8 @@ export async function userRoutes(server: FastifyInstance){
 
     server.post("/users", userController.CreateUser);
 
+    server.get("/users/me", {preHandler: Auth}, userController.GetMe);
+
     server.get("/users", {preHandler: Auth}, userController.GetAll);
 
     server.put("/users/:id", {preHandler: Auth}, userController.update);
