@@ -34,6 +34,15 @@ export async function getAllusers(){
     return users;
 }
 
+export async function getUserById(id: string){
+    const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, email: true, name: true, role: true },
+    });
+
+    return user;
+}
+
 export async function updateUser(id: string, data: UpdateUserInput){
     const payload: any = {};
     if(data.name !== undefined) payload.name = data.name;
@@ -65,4 +74,14 @@ export async function delUser(id: string){
         select: {id: true, email: true, name: true, role: true}
     });
     return deleted;
+
+    //se nao usasse o onDelete: Cascade no schema do banco de dados ficaria assim:
+    // await prisma.$transaction([ <- garante consistencia para várias operações atomicas no banco
+    //     prisma.habit.deleteMany({
+    //         where: {userId: id},
+    //     }),
+    //     prisma.user.delete({
+    //         where: {id: id}
+    //     })
+    // ])
 }

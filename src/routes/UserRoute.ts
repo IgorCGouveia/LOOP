@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import UserController from "../controllers/UserController";
+import { Auth } from "../Middleware/Auth";
 
 const userController = new UserController();
 
@@ -9,10 +10,12 @@ export async function userRoutes(server: FastifyInstance){
 
     server.post("/users", userController.CreateUser);
 
-    server.get("/users", userController.GetAll);
+    server.get("/users/me", {preHandler: Auth}, userController.GetMe);
 
-    server.put("/users/:id", userController.update);
+    server.get("/users", {preHandler: Auth}, userController.GetAll);
 
-    server.delete("/users/:id",userController.delUser);
+    server.put("/users/:id", {preHandler: Auth}, userController.update);
+
+    server.delete("/users/:id", {preHandler: Auth}, userController.delUser);
 }
 

@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
@@ -15,14 +15,46 @@ datasource db {
 }
 
 model User {
-  id      String   @id @default(cuid())
+  id      String   @id @default(cuid(2))
   email   String @unique
   password String 
-  name    String?
+  name    String
   role    Role @default(USER)
+
+
+  habits  Habit[]
+  habitLogs HabitLog[]
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+
+model Habit {
+  id         String    @id @default(cuid(2))
+  name       String
+  description     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userId          String
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  habitLogs HabitLog[]
+
+}
+
+model HabitLog {
+  id          String   @id @default(cuid(2))
+  completedAt DateTime @default(now())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  habitId     String
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
 }

@@ -1,6 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../app";
-import { CreateUserSchema, UpdateUserSchema } from "../schema/userVal";
+import { CreateUserVal, UpdateUserVal } from "../schema/userVal";
 import * as userService from "../services/userServices"
 
 
@@ -13,8 +13,11 @@ export default class UserController{
         // const newUser = await prisma.user.create({data: dados})
         // return res.status(201).send(newUser);
         //valida as entradas com o zod
-        const data = CreateUserSchema.parse(req.body);
 
+        
+        //const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body; tinha virgula no final do body.
+        const data = CreateUserVal.parse(req.body);
+        
         //vai chamar o service para criar um usuario
         const NewUser = await userService.createUser(data);
 
@@ -28,7 +31,16 @@ export default class UserController{
     async GetAll(req:FastifyRequest, res:FastifyReply){
         const users = await userService.getAllusers();
         return res.status(200).send(users);
-    
+    }
+
+    async GetMe(req:FastifyRequest, res:FastifyReply){
+        const user = await userService.getUserById(req.user.id);
+
+        if(!user){
+            return res.status(404).send("Usuário não encontrado");
+        }
+
+        return res.status(200).send(user);
     }
 
 
@@ -43,7 +55,7 @@ export default class UserController{
 
         const { id } = req.params as {id: string};
         
-        const data = UpdateUserSchema.parse(req.body);
+        const data = UpdateUserVal.parse(req.body);
 
         if( Object.keys(data).length == 0){
             return res.status(400).send("Nenhum dado para atualizar foi fornecido");
@@ -61,7 +73,7 @@ export default class UserController{
 
     async delUser(req:FastifyRequest, res:FastifyReply){
         const {id} = req.params as {id: string};
-        const deletado = await prisma.user.delete({where: {id: Number(id)}});
+        const deletado = await prisma.user.delete({where: {id: id}});
         return res.status(200).send(deletado); 
     }
 }
