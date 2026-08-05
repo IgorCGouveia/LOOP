@@ -1,4 +1,4 @@
-import { FastifyRequest } from "fastify";
+import { FastifyRequest, FastifyReply } from "fastify";
 import jwt from "jsonwebtoken";
 
 declare module "fastify" {
@@ -15,32 +15,56 @@ type TokenPayload = {
     role: string;
 };
 
+export default class Auth{
 
+    constructor(){}
 
-export async function Auth(req: FastifyRequest){
+    user = async (req: FastifyRequest,res: FastifyReply): Promise<boolean> =>{
     const bearer = req.headers.authorization;
 
     if(!bearer){
-        throw new Error("Token nao informado");
+        res.status(401).send("Token não informado");
+        return false;
     }
 
     const token = bearer.split(" ")[1];
 
     if(!token){
-        throw new Error("Formato do token inválido");
+        res.status(401).send("Não autorizado. Sem Token");
+        return false;
     }
 
     const secretKey = process.env.SECRET_KEY;
 
     if(!secretKey){
-        throw new Error("Sem chave secreta");
+        res.status(500).send("Sem chave secreta");
+        return false;
     }
-    const autenticado = jwt.verify(token, secretKey) as TokenPayload;
 
-    
+    try{
+        const autenticado = jwt.verify(token, secretKey) as TokenPayload;
+
         req.user = {
             id: autenticado.id,
             role: autenticado.role
         }
-    
+    }catch{
+        res.status(401).send("Token inválido ou expirado");
+        return false;
+    }
+
+    return true;
 }
+
+admin = async (req: FastifyRequest, res:FastifyReply) =>{
+    const autenticado = await this.user(req,res);
+    if(!autenticado) return;
+
+    if(req.user.role != "ADMIN"){
+        return res.status(403).send("Você não tem permissão")
+    }
+
+}
+
+}
+

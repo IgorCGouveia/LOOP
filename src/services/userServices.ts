@@ -3,6 +3,19 @@ import { prisma } from "../app";
 import { CreateUserInput, UpdateUserInput } from "../schema/userVal";
 
 
+export async function FindUser(id: string){
+    const user = await prisma.user.findUnique({
+        where: {id},
+        select: {id: true, email: true, name: true, role: true}
+        });    
+
+    if(!user){
+        return null
+    }
+    return user;
+}
+
+
 export async function createUser(data: CreateUserInput){
     try{
         const hash = await argon2.hash(data.password, {

@@ -21,6 +21,17 @@ async function ensureHabitExists(id: string){
 
 }
 
+export async function FindHabit(id: string) {
+
+    const exist = await prisma.habit.findUnique({where: {id}})
+
+    if(!exist){
+        return null;
+    }
+    return exist;
+    
+}
+
 export async function CreateHabit(data: CreateHabitInput)
 {
     await ensureUserExists(data.userId);

@@ -66,10 +66,17 @@ export default class HabitController{
 
     async UpdateHabit(req:FastifyRequest, res: FastifyReply){
 
-        const {userId} = req.params as {userId:string};
+    const {id} = req.params as {id:string};
 
-        if(req.user.id === userId){
-        const {id} = req.params as {id:string};
+        const habit = await habitService.FindHabit(id)
+
+        if(habit == null){
+            return res.status(404).send("Not Found!");
+        }
+        
+        const userId = habit.userId;
+        
+        if(req.user.id === userId ){
         const data = UpdateHabitVal.parse(req.body);
         if(Object.keys(data).length == 0){
             return res.status(400).send("Nenhum dado para atualizar foi fornecido.");
@@ -89,10 +96,17 @@ export default class HabitController{
 
     async DeleteHabit(req: FastifyRequest, res: FastifyReply){
         
-        const {userId} = req.params as {userId:string};
+        const {id} = req.params as {id:string};
+
+        const habit = await habitService.FindHabit(id);
+
+        if(habit == null){
+            return res.status(404).send("Not found!");
+        }
+
+        const userId = habit.userId;
 
         if(req.user.id === userId){
-        const {id} = req.params as {id: string};
         const deleted = await habitService.DeleteHabit(id);
         return res.status(200).send({
             message: "Hábito apagado",
