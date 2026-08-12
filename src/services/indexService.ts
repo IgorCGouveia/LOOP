@@ -7,7 +7,7 @@ export async function Logar(email: string, password: string){
         where: {email}
     })
     if(!User){
-        throw new Error("Usuário não encontrado");
+        return null
     }
     const verificada = await argon2.verify(User.password, password);
     if(verificada){
@@ -33,7 +33,7 @@ export async function Logar(email: string, password: string){
             throw new Error("Nao existe Secret Key");
         }   
     }else{
-        throw new Error("Email ou Senha Incorreta.");
+        return null;
     }
 
 
