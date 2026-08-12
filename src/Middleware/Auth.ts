@@ -57,6 +57,8 @@ export default class Auth{
 }
 
 admin = async (req: FastifyRequest, res:FastifyReply) =>{
+// tem que ser arrow function para quando o fastify guardar a função o this.user() não sair como undefined
+// sem o arrow admin() perderia o bind ao ser chamada
     const autenticado = await this.user(req,res);
     if(!autenticado) return;
 
