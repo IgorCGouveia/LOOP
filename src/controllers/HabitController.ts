@@ -23,13 +23,7 @@ export default class HabitController{
 
 
     async GetMyHabits(req: FastifyRequest, res: FastifyReply){
-        const usuarioId = req.user.id;
-        if(req.user.id !== usuarioId){
-            return res.status(403).send("Você não tem permissão para ver os hábitos de outra pessoa.")
-        }
-
-
-        const habits = await habitService.GetAllHabitsFromUser(usuarioId);
+        const habits = await habitService.GetAllHabitsFromUser(req.user.id);
         return res.status(200).send(habits);
     }
 
@@ -52,12 +46,10 @@ export default class HabitController{
     
 
     async GetAllHabits(req: FastifyRequest, res:FastifyReply){
-        
+    
         if(req.user.role === "ADMIN"){
-
         const habits = await habitService.GetAllHabits();
         return res.status(200).send(habits);
-
         }
         return res.status(403).send("Você não tem permissão para ver os hábitos de outra pessoa.")
     }
