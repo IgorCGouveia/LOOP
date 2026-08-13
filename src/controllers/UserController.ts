@@ -8,14 +8,9 @@ export default class UserController{
 
     constructor(){}
 
-    async CreateUser(req:FastifyRequest, res:FastifyReply){
-        // const dados = req.body;
-        // const newUser = await prisma.user.create({data: dados})
-        // return res.status(201).send(newUser);
-        //valida as entradas com o zod
-
+    async CreateUser(req:FastifyRequest, res:FastifyReply){    
         
-        //const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body; tinha virgula no final do body.
+        
         const data = CreateUserVal.parse(req.body);
         
         //vai chamar o service para criar um usuario

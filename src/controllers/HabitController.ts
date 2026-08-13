@@ -8,10 +8,6 @@ export default class HabitController{
     constructor(){}
 
     async CreateHabit(req:FastifyRequest, res:FastifyReply){
-        // const dados = req.body;
-        // const newUser = await prisma.user.create({data: dados})
-        // return res.status(201).send(newUser);
-        //valida as entradas com o zod
         const userId = req.user.id;
         const data = CreateHabitVal.parse({
             name: (req.body as { name: string}).name,
@@ -122,15 +118,5 @@ export default class HabitController{
         
     }
 
-
-
-
-
-
-            // async delUser(req:FastifyRequest, res:FastifyReply){
-            //     const {id} = req.params as {id: string};
-            //     const deletado = await prisma.user.delete({where: {id: Number(id)}});
-            //     return res.status(200).send(deletado); 
-            // }
         }
 
