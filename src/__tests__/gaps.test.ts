@@ -10,6 +10,8 @@ describe("Gaps de cobertura fechados", () => {
 
     let userId: string | undefined;
     let userToken: string;
+    let otherUserId: string | undefined;
+    let otherUserToken: string;
     let adminToken: string;
 
     async function createUserAndLogin(email: string) {
@@ -38,13 +40,18 @@ describe("Gaps de cobertura fechados", () => {
         userId = user.id;
         userToken = user.accessToken;
 
+        const otherUser = await createUserAndLogin(`gaps-other-${Date.now()}@example.com`);
+        otherUserId = otherUser.id;
+        otherUserToken = otherUser.accessToken;
+
         adminToken = jwt.sign({ id: "admin-gaps-test", role: "ADMIN" }, secretKey, { expiresIn: "1h" });
     });
 
     afterAll(async () => {
-        if (userId) {
-            await prisma.habit.deleteMany({ where: { userId } }).catch(() => {});
-            await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+        const remainingUserIds = [userId, otherUserId].filter((id): id is string => Boolean(id));
+        if (remainingUserIds.length > 0) {
+            await prisma.habit.deleteMany({ where: { userId: { in: remainingUserIds } } }).catch(() => {});
+            await prisma.user.deleteMany({ where: { id: { in: remainingUserIds } } }).catch(() => {});
         }
         await app.close();
         await prisma.$disconnect();
@@ -97,13 +104,32 @@ describe("Gaps de cobertura fechados", () => {
             expect(Array.isArray(res.json())).toBe(true);
         });
 
-        it("usuário comum não pode ver hábitos de outro usuário (403)", async () => {
+        it("o próprio usuário pode ver os próprios hábitos por essa rota (200)", async () => {
             const res = await app.inject({
                 method: "GET",
                 url: `/users/${userId}/habits`,
                 headers: { authorization: `Bearer ${userToken}` },
             });
+            expect(res.statusCode).toBe(200);
+            expect(Array.isArray(res.json())).toBe(true);
+        });
+
+        it("usuário comum não pode ver hábitos de outro usuário que não seja ele mesmo (403)", async () => {
+            const res = await app.inject({
+                method: "GET",
+                url: `/users/${userId}/habits`,
+                headers: { authorization: `Bearer ${otherUserToken}` },
+            });
             expect(res.statusCode).toBe(403);
+        });
+
+        it("userId inexistente -> 404 (bug 4: antes retornava 500)", async () => {
+            const res = await app.inject({
+                method: "GET",
+                url: "/users/id-que-nao-existe/habits",
+                headers: { authorization: `Bearer ${adminToken}` },
+            });
+            expect(res.statusCode).toBe(404);
         });
     });
 

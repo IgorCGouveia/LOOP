@@ -6,7 +6,7 @@ async function ensureUserExists(userId: string)
 {
     const exist = await prisma.user.findUnique({where: {id: userId}});
     if(!exist){
-        throw new Error("Usuário não encontrado.");
+        return null
     }
     return exist;
 }
@@ -14,7 +14,7 @@ async function ensureUserExists(userId: string)
 async function ensureHabitExists(id: string){
     const exist = await prisma.habit.findUnique({where: {id}})
     if(!exist){
-        throw new Error("Hábito não encontrado.");
+        return null
 
     }
     return exist;
@@ -49,7 +49,10 @@ export async function CreateHabit(data: CreateHabitInput)
 
 export async function GetAllHabitsFromUser(userId: string){
 
-    await ensureUserExists(userId);
+    const user = await ensureUserExists(userId);
+    if(!user){
+        return null
+    }
     
     const habits = await prisma.habit.findMany({
         where: {userId: userId},

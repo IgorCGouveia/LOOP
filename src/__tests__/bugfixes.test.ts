@@ -129,4 +129,21 @@ describe("Correções de bugs (docs/problems/PROBLEMAS.md)", () => {
             }
         });
     });
+
+    describe("Bug 3 - erro de email duplicado não capturado", () => {
+        it("cadastrar email já existente -> 409, sem vazar detalhe do Prisma", async () => {
+            const res = await app.inject({
+                method: "POST",
+                url: "/users",
+                payload: { name: "Outro Nome", email, password, confirmPassword: password },
+            });
+
+            expect(res.statusCode).toBe(409);
+
+            const raw = res.body;
+            expect(raw).not.toContain("Prisma");
+            expect(raw).not.toContain(".ts:");
+            expect(raw).not.toContain("Área de trabalho");
+        });
+    });
 });

@@ -17,7 +17,6 @@ export async function FindUser(id: string){
 
 
 export async function createUser(data: CreateUserInput){
-    try{
         const hash = await argon2.hash(data.password, {
             type: argon2.argon2id,
             memoryCost: 2 ** 16,
@@ -34,9 +33,6 @@ export async function createUser(data: CreateUserInput){
             select: {id: true, email: true, name: true, role: true}
         });
         return user;
-    }catch(err){
-        throw err;
-    }
 }
 
 export async function getAllusers(){

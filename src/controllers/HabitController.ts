@@ -41,11 +41,14 @@ export default class HabitController{
     async GetAllFromUser(req:FastifyRequest, res:FastifyReply){
         const {userId} = req.params as {userId:string};
 
-        if(req.user.role !== "ADMIN"){
+        if(req.user.id !== userId && req.user.role !== "ADMIN"){
             return res.status(403).send("Você não tem permissão para ver os hábitos de outra pessoa.")
         }
 
         const habits = await habitService.GetAllHabitsFromUser(userId);
+        if(!habits){
+            return res.status(404).send("Usuário ou Habitos não encontrados.");
+        }
             return res.status(200).send(habits);
 
         }
