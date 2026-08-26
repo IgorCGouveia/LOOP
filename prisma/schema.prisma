@@ -14,6 +14,7 @@ model User {
   password String
   name     String
   role     Role    @default(USER)
+  timezone String  @default("UTC") // NOVO - IANA (ex:"America/São_Paulo)
   habits   Habit[]
 }
 
@@ -25,9 +26,27 @@ model Habit {
   updatedAt   DateTime @updatedAt
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs        HabitLog[]
+
+  longestStreak   Int @default(0)
+  longestStreakStartDate DateTime? @db.Date
+}
+
+
+model HabitLog{
+  id    String  @id @default(cuid(2))
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  checkedAt DateTime @default(now())   // instante bruto em UTC
+  date      DateTime @db.Date          // dia calendário, congelado no timezone do usuário no momento da escrita
+
+  @@index([habitId, date])
+
 }
 
 enum Role {
   USER
   ADMIN
 }
+
+
