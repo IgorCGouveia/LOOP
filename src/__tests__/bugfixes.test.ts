@@ -16,7 +16,7 @@ describe("Correções de bugs (docs/problems/PROBLEMAS.md)", () => {
         const createRes = await app.inject({
             method: "POST",
             url: "/users",
-            payload: { name: "Usuário Bugfix", email, password, confirmPassword: password },
+            payload: { name: "Usuário Bugfix", email, password, confirmPassword: password, timezone: "America/Sao_Paulo" },
         });
         userId = createRes.json().id;
     });
@@ -135,7 +135,7 @@ describe("Correções de bugs (docs/problems/PROBLEMAS.md)", () => {
             const res = await app.inject({
                 method: "POST",
                 url: "/users",
-                payload: { name: "Outro Nome", email, password, confirmPassword: password },
+                payload: { name: "Outro Nome", email, password, confirmPassword: password, timezone: "America/Sao_Paulo" },
             });
 
             expect(res.statusCode).toBe(409);

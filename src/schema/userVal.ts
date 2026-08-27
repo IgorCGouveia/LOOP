@@ -1,5 +1,7 @@
 import {z} from 'zod';
 
+const IANA_TIMEZONES = new Set(Intl.supportedValuesOf('timeZone'));
+
 export const CreateUserVal = z.object({
     name: z.string()
         .min(3, 'Nome é obrigatório')
@@ -9,10 +11,15 @@ export const CreateUserVal = z.object({
         .string()
         .min(8)
         .max(128),
-        
+
     confirmPassword:z
         .string()
         .min(8),
+
+    timezone: z.string()
+        .refine((tz) => IANA_TIMEZONES.has(tz), {
+            message: "Timezone inválido. Use um identificador IANA (ex: 'America/Sao_Paulo').",
+        }),
 })
 .refine(
     (data) =>   data.confirmPassword == data.password,

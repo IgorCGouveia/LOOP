@@ -1,5 +1,9 @@
 import { prisma } from '../app';
 import { FindHabit } from './habitServices';
+import * as checkinRepository from '../repositories/checkinRepository';
+import type { Habit } from '../generated/prisma/client';
+
+const GRACE_TOKENS_CAP = 3;
 
 function getDateOnlyInTimezone(instant: Date, timezone: string): Date {
     const formatted = new Intl.DateTimeFormat('en-CA', {
@@ -20,16 +24,6 @@ function addDays(date: Date, days: number): Date {
 
 function isNextDay(earlier: Date, later: Date): boolean {
     return addDays(earlier, 1).getTime() === later.getTime();
-}
-
-async function getDistinctDatesDesc(habitId: string): Promise<Date[]> {
-    const logs = await prisma.habitLog.findMany({
-        where: { habitId },
-        select: { date: true },
-        distinct: ['date'],
-        orderBy: { date: 'desc' },
-    });
-    return logs.map((log) => log.date);
 }
 
 // streak atual: sem janela fixa, conta a sequência contígua mais recente
@@ -56,15 +50,7 @@ function computeTailStreak(datesDesc: Date[]): { length: number; startDate: Date
 
 // recorde histórico: varre o log inteiro. Só é chamado quando um undo
 // mexe na sequência que hoje detém o longestStreak (ver docs/problems).
-async function recalculateLongestStreak(habitId: string): Promise<{ length: number; startDate: Date | null }> {
-    const logs = await prisma.habitLog.findMany({
-        where: { habitId },
-        select: { date: true },
-        distinct: ['date'],
-        orderBy: { date: 'asc' },
-    });
-    const datesAsc = logs.map((log) => log.date);
-
+function recalculateLongestStreak(datesAsc: Date[]): { length: number; startDate: Date | null } {
     if (datesAsc.length === 0) {
         return { length: 0, startDate: null };
     }
@@ -91,6 +77,29 @@ async function recalculateLongestStreak(habitId: string): Promise<{ length: numb
     return { length: longest, startDate: longestStart };
 }
 
+// meses corridos (UTC) entre duas datas — usado só pra saber quantas
+// reposições de grace token (+1/mês, calendário fixo) já eram devidas.
+function monthsElapsedUTC(from: Date, to: Date): number {
+    return (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth());
+}
+
+async function replenishGraceTokens(habit: Habit): Promise<number> {
+    const now = new Date();
+    const elapsed = monthsElapsedUTC(habit.graceTokensUpdatedAt, now);
+
+    if (elapsed <= 0) {
+        return habit.graceTokens;
+    }
+
+    const newBalance = Math.min(habit.graceTokens + elapsed, GRACE_TOKENS_CAP);
+    await prisma.habit.update({
+        where: { id: habit.id },
+        data: { graceTokens: newBalance, graceTokensUpdatedAt: now },
+    });
+
+    return newBalance;
+}
+
 export async function CreateCheckIn(habitId: string, ownerId: string) {
     const habit = await FindHabit(habitId);
     if (!habit) {
@@ -104,12 +113,26 @@ export async function CreateCheckIn(habitId: string, ownerId: string) {
 
     const today = getDateOnlyInTimezone(new Date(), owner.timezone);
 
-    const checkin = await prisma.habitLog.create({
-        data: { habitId, date: today },
-    });
+    const datesAscBefore = await checkinRepository.getEffectiveLog(habitId);
+    const lastDate = datesAscBefore[datesAscBefore.length - 1] ?? null;
 
-    const datesDesc = await getDistinctDatesDesc(habitId);
-    const tail = computeTailStreak(datesDesc);
+    let graceTokens = await replenishGraceTokens(habit);
+
+    // gap de exatamente 1 dia (hoje = último dia + 2) consome 1 token,
+    // gravando o dia pulado em GraceFill pra ele contar como contíguo
+    // em qualquer recálculo futuro. Gap maior não é perdoável.
+    const isOneDayGap = lastDate !== null && addDays(lastDate, 2).getTime() === today.getTime();
+
+    if (isOneDayGap && graceTokens > 0) {
+        await checkinRepository.insertGraceFill(habitId, addDays(lastDate!, 1));
+        graceTokens -= 1;
+        await prisma.habit.update({ where: { id: habitId }, data: { graceTokens } });
+    }
+
+    const checkin = await checkinRepository.insertCheckIn(habitId, today);
+
+    const datesAsc = await checkinRepository.getEffectiveLog(habitId);
+    const tail = computeTailStreak([...datesAsc].reverse());
     const currentStreak = tail.length;
 
     let longestStreak = habit.longestStreak;
@@ -125,7 +148,7 @@ export async function CreateCheckIn(habitId: string, ownerId: string) {
         });
     }
 
-    return { checkin, currentStreak, longestStreak };
+    return { checkin, currentStreak, longestStreak, graceTokens };
 }
 
 export async function UndoCheckIn(habitId: string) {
@@ -134,33 +157,28 @@ export async function UndoCheckIn(habitId: string) {
         return null;
     }
 
-    const lastLog = await prisma.habitLog.findFirst({
-        where: { habitId },
-        orderBy: { checkedAt: 'desc' },
-    });
-
+    const lastLog = await checkinRepository.findMostRecentCheckIn(habitId);
     if (!lastLog) {
         return null;
     }
 
-    //edge case test
-    const tailBefore = computeTailStreak(await getDistinctDatesDesc(habitId));
-
-    //if the undo affects the longest streak
+    const tailBefore = computeTailStreak([...(await checkinRepository.getEffectiveLog(habitId))].reverse());
     const undoAffectsRecord =
         habit.longestStreakStartDate !== null &&
         tailBefore.startDate !== null &&
         tailBefore.startDate.getTime() === habit.longestStreakStartDate.getTime();
 
-    await prisma.habitLog.delete({ where: { id: lastLog.id } });
+    await checkinRepository.deleteCheckIn(lastLog.id);
 
-    const currentStreak = computeTailStreak(await getDistinctDatesDesc(habitId)).length;
+    const currentStreak = computeTailStreak(
+        [...(await checkinRepository.getEffectiveLog(habitId))].reverse(),
+    ).length;
 
     let longestStreak = habit.longestStreak;
     let longestStreakStartDate = habit.longestStreakStartDate;
 
     if (undoAffectsRecord) {
-        const recalculated = await recalculateLongestStreak(habitId);
+        const recalculated = recalculateLongestStreak(await checkinRepository.getEffectiveLog(habitId));
         longestStreak = recalculated.length;
         longestStreakStartDate = recalculated.startDate;
 
@@ -174,10 +192,7 @@ export async function UndoCheckIn(habitId: string) {
 }
 
 export async function GetCheckInsByHabit(habitId: string) {
-    return prisma.habitLog.findMany({
-        where: { habitId },
-        orderBy: { date: 'desc' },
-    });
+    return checkinRepository.findCheckInsByHabit(habitId);
 }
 
 export async function GetCheckInsByUser(userId: string) {
@@ -186,8 +201,5 @@ export async function GetCheckInsByUser(userId: string) {
         return null;
     }
 
-    return prisma.habitLog.findMany({
-        where: { habit: { userId } },
-        orderBy: { date: 'desc' },
-    });
+    return checkinRepository.findCheckInsByUser(userId);
 }

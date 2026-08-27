@@ -22,7 +22,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
         const createRes = await app.inject({
             method: "POST",
             url: "/users",
-            payload: { name: "Usuário Teste", email, password, confirmPassword: password },
+            payload: { name: "Usuário Teste", email, password, confirmPassword: password, timezone: "America/Sao_Paulo" },
         });
         const { id } = createRes.json();
 

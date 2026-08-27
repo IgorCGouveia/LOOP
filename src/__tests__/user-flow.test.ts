@@ -31,6 +31,7 @@ describe("Fluxo completo: criar usuário -> login -> usar token", () => {
                 email,
                 password,
                 confirmPassword: password,
+                timezone: "America/Sao_Paulo",
             },
         });
 
