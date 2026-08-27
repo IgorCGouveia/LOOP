@@ -3,6 +3,7 @@ import Fastify from "fastify"
 import {userRoutes} from './routes/UserRoute';
 import { PrismaClient } from './generated/prisma/client';
 import { habitRoutes } from './routes/HabitRoute';
+import { checkinRoutes } from './routes/CheckinRoute';
 import { LoginRoute } from './routes/indexRoute';
 import { errorHandler } from './Middleware/errorHandler';
 
@@ -20,6 +21,7 @@ export function buildApp(){
      const server = Fastify({logger: true});
     server.register(userRoutes);
     server.register(habitRoutes);
+    server.register(checkinRoutes);
     server.register(LoginRoute);
     server.setErrorHandler(errorHandler)
     return server;
