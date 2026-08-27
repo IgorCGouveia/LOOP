@@ -143,7 +143,10 @@ export async function UndoCheckIn(habitId: string) {
         return null;
     }
 
+    //edge case test
     const tailBefore = computeTailStreak(await getDistinctDatesDesc(habitId));
+
+    //if the undo affects the longest streak
     const undoAffectsRecord =
         habit.longestStreakStartDate !== null &&
         tailBefore.startDate !== null &&
