@@ -18,7 +18,7 @@ export async function habitRoutes(server: FastifyInstance){
 
     server.get("/habits", {preHandler: auth.admin}, habitController.GetAllHabits);
 
-    server.put("/habits/:id", {preHandler: auth.user}, habitController.UpdateHabit);
+    server.patch("/habits/:id", {preHandler: auth.user}, habitController.UpdateHabit);
 
     server.delete("/habits/:id", {preHandler: auth.user}, habitController.DeleteHabit);
 }

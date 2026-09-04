@@ -12,7 +12,7 @@ export async function userRoutes(server: FastifyInstance){
 
     server.get("/users", {preHandler: auth.admin}, userController.GetAll);
 
-    server.put("/users/:id", {preHandler: auth.user}, userController.update);
+    server.patch("/users/:id", {preHandler: auth.user}, userController.update);
 
     server.delete("/users/:id", {preHandler: auth.user}, userController.delUser);
 }

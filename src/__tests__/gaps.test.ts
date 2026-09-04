@@ -161,9 +161,9 @@ describe("Gaps de cobertura fechados", () => {
     });
 
     describe("Nenhum dado fornecido para atualizar -> 400", () => {
-        it("PUT /users/:id com corpo vazio -> 400", async () => {
+        it("PATCH /users/:id com corpo vazio -> 400", async () => {
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: `/users/${userId}`,
                 headers: { authorization: `Bearer ${userToken}` },
                 payload: {},
@@ -171,7 +171,7 @@ describe("Gaps de cobertura fechados", () => {
             expect(res.statusCode).toBe(400);
         });
 
-        it("PUT /habits/:id com corpo vazio -> 400", async () => {
+        it("PATCH /habits/:id com corpo vazio -> 400", async () => {
             const habitRes = await app.inject({
                 method: "POST",
                 url: "/habits",
@@ -181,7 +181,7 @@ describe("Gaps de cobertura fechados", () => {
             const habitId = habitRes.json().id;
 
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: `/habits/${habitId}`,
                 headers: { authorization: `Bearer ${userToken}` },
                 payload: {},

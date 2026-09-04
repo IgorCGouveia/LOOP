@@ -84,7 +84,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
     describe("Hábitos", () => {
         it("não-dono não pode atualizar hábito de outro usuário (403)", async () => {
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: `/habits/${habitToUpdateId}`,
                 headers: { authorization: `Bearer ${otherToken}` },
                 payload: { name: "Nome forjado" },
@@ -94,7 +94,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
 
         it("dono pode atualizar seu próprio hábito (200)", async () => {
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: `/habits/${habitToUpdateId}`,
                 headers: { authorization: `Bearer ${ownerToken}` },
                 payload: { name: "Hábito atualizado" },
@@ -105,7 +105,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
 
         it("atualizar hábito inexistente retorna 404", async () => {
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: "/habits/id-que-nao-existe",
                 headers: { authorization: `Bearer ${ownerToken}` },
                 payload: { name: "Não importa" },
@@ -144,7 +144,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
     describe("Usuários", () => {
         it("não-dono não pode atualizar perfil de outro usuário (403)", async () => {
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: `/users/${otherId}`,
                 headers: { authorization: `Bearer ${ownerToken}` },
                 payload: { name: "Nome forjado" },
@@ -154,7 +154,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
 
         it("usuário pode atualizar o próprio perfil (200)", async () => {
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: `/users/${ownerId}`,
                 headers: { authorization: `Bearer ${ownerToken}` },
                 payload: { name: "Nome Atualizado" },
@@ -166,7 +166,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
         it("usuário pode atualizar a própria senha, e a senha nova passa a funcionar no login (200)", async () => {
             const novaSenha = "novaSenha456";
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: `/users/${ownerId}`,
                 headers: { authorization: `Bearer ${ownerToken}` },
                 payload: { password: novaSenha, confirmPassword: novaSenha },
@@ -195,7 +195,7 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
 
         it("atualizar usuário inexistente retorna 404", async () => {
             const res = await app.inject({
-                method: "PUT",
+                method: "PATCH",
                 url: "/users/id-que-nao-existe",
                 headers: { authorization: `Bearer ${ownerToken}` },
                 payload: { name: "Não importa" },
