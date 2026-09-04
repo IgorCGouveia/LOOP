@@ -9,9 +9,11 @@ export default class HabitController{
 
     async CreateHabit(req:FastifyRequest, res:FastifyReply){
         const userId = req.user.id;
+        const body = req.body as { name: string; description?: string; schedule?: unknown };
         const data = CreateHabitVal.parse({
-            name: (req.body as { name: string}).name,
-            description: (req.body as {description? : string}).description,
+            name: body.name,
+            description: body.description,
+            schedule: body.schedule,
             userId,
         });
 

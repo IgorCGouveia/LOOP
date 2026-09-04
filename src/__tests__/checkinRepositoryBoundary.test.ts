@@ -5,7 +5,7 @@ import path from 'path';
 const SRC_DIR = path.resolve(__dirname, '..');
 const REPOSITORY_FILE = path.resolve(SRC_DIR, 'repositories', 'checkinRepository.ts');
 const EXCLUDED_DIRS = new Set(['generated', '__tests__']);
-const FORBIDDEN_PATTERNS = [/prisma\.habitLog\b/, /prisma\.graceFill\b/];
+const FORBIDDEN_PATTERNS = [/prisma\.habitLog\b/, /prisma\.graceFill\b/, /prisma\.habitSchedule\b/];
 
 function listTsFiles(dir: string, files: string[] = []): string[] {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -22,8 +22,8 @@ function listTsFiles(dir: string, files: string[] = []): string[] {
     return files;
 }
 
-describe('checkinRepository é o único ponto de acesso a HabitLog/GraceFill', () => {
-    it('nenhum arquivo fora do repositório usa prisma.habitLog ou prisma.graceFill', () => {
+describe('checkinRepository é o único ponto de acesso a HabitLog/GraceFill/HabitSchedule', () => {
+    it('nenhum arquivo fora do repositório usa prisma.habitLog, prisma.graceFill ou prisma.habitSchedule', () => {
         const offenders = listTsFiles(SRC_DIR)
             .filter((file) => file !== REPOSITORY_FILE)
             .filter((file) => {

@@ -1,6 +1,9 @@
 import {prisma } from '../app';
 import {CreateHabitInput, UpdateHabitInput} from  '../schema/habitVal'
+import * as checkinRepository from '../repositories/checkinRepository';
+import { getDateOnlyInTimezone } from '../utils/date';
 
+const DEFAULT_SCHEDULE = { type: 'DAILY' as const, targetPerDay: 1 };
 
 async function ensureUserExists(userId: string)
 {
@@ -21,6 +24,11 @@ async function ensureHabitExists(id: string){
 
 }
 
+async function attachSchedules<T extends { id: string }>(habits: T[]) {
+    const schedules = await checkinRepository.getCurrentSchedules(habits.map((h) => h.id));
+    return habits.map((h) => ({ ...h, schedule: schedules.get(h.id) ?? null }));
+}
+
 export async function FindHabit(id: string) {
 
     const exist = await prisma.habit.findUnique({where: {id}})
@@ -29,12 +37,12 @@ export async function FindHabit(id: string) {
         return null;
     }
     return exist;
-    
+
 }
 
 export async function CreateHabit(data: CreateHabitInput)
 {
-    await ensureUserExists(data.userId);
+    const user = await ensureUserExists(data.userId);
 
     const habit = await prisma.habit.create({
         data: {
@@ -44,7 +52,12 @@ export async function CreateHabit(data: CreateHabitInput)
         },
     });
 
-    return habit;
+    // effectiveFrom da 1ª versão começa hoje, não amanhã — a regra
+    // forward-only é sobre edição; criação não tem histórico a proteger.
+    const today = getDateOnlyInTimezone(new Date(), user?.timezone ?? 'UTC');
+    const schedule = await checkinRepository.createScheduleVersion(habit.id, data.schedule ?? DEFAULT_SCHEDULE, today);
+
+    return { ...habit, schedule };
 }
 
 export async function GetAllHabitsFromUser(userId: string){
@@ -53,14 +66,14 @@ export async function GetAllHabitsFromUser(userId: string){
     if(!user){
         return null
     }
-    
+
     const habits = await prisma.habit.findMany({
         where: {userId: userId},
         orderBy: {name: 'asc'},
 
     });
 
-    return habits;
+    return attachSchedules(habits);
 }
 
 export async function GetAllHabits(){
@@ -69,16 +82,27 @@ export async function GetAllHabits(){
         orderBy:{ name: 'asc'}
     });
 
-    return habits;
+    return attachSchedules(habits);
 }
 
 export async function UpdateHabit(id: string,data: UpdateHabitInput){
 
-    await ensureHabitExists(id);
+    const habit = await ensureHabitExists(id);
+    const { schedule, ...rest } = data;
 
-    const updated = await prisma.habit.update({where: {id}, data})
+    let updated = habit;
+    if (Object.keys(rest).length > 0) {
+        updated = await prisma.habit.update({ where: { id }, data: rest });
+    }
 
-    return updated;
+    if (schedule && updated) {
+        const owner = await prisma.user.findUnique({ where: { id: updated.userId } });
+        const today = getDateOnlyInTimezone(new Date(), owner?.timezone ?? 'UTC');
+        await checkinRepository.createScheduleVersion(id, schedule, today);
+    }
+
+    const currentSchedule = await checkinRepository.getCurrentSchedule(id);
+    return { ...updated, schedule: currentSchedule };
 
 }
 

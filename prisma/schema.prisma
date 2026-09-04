@@ -28,6 +28,7 @@ model Habit {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   logs        HabitLog[]
   graceFills  GraceFill[]
+  schedules   HabitSchedule[]
 
   longestStreak   Int @default(0)
   longestStreakStartDate DateTime? @db.Date
@@ -38,6 +39,28 @@ model Habit {
   graceTokensUpdatedAt DateTime @default(now())
 }
 
+// frequência/meta do hábito, versionada por período. Editar nunca é
+// UPDATE — fecha a versão vigente e abre uma nova. effectiveFrom/
+// effectiveTo marcam o dia; effectiveFromAt/effectiveToAt o instante
+// exato, usado só quando duas versões caem no mesmo dia.
+model HabitSchedule {
+  id      String @id @default(cuid(2))
+  habitId String
+  habit   Habit  @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  effectiveFrom   DateTime  @db.Date
+  effectiveFromAt DateTime
+  effectiveTo     DateTime? @db.Date
+  effectiveToAt   DateTime?
+
+  targetPerDay Int
+  type         ScheduleType
+  daysOfWeek   Int[] // só quando type = WEEKLY
+  intervalDays Int? // só quando type = INTERVAL
+
+  @@unique([habitId, effectiveFromAt])
+  @@index([habitId, effectiveFrom])
+}
 
 model HabitLog{
   id    String  @id @default(cuid(2))
@@ -45,6 +68,13 @@ model HabitLog{
   habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
   checkedAt DateTime @default(now())   // instante bruto em UTC
   date      DateTime @db.Date          // dia calendário, congelado no timezone do usuário no momento da escrita
+  kind      LogKind  @default(CHECKIN)
+
+  // undo é um evento novo, não apaga o check-in original. undoesId
+  // aponta pro CHECKIN desfeito; @unique impede desfazer duas vezes.
+  undoesId String?   @unique
+  undoes   HabitLog? @relation("UndoCompensates", fields: [undoesId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  undoneBy HabitLog? @relation("UndoCompensates")
 
   @@index([habitId, date])
 
@@ -67,6 +97,17 @@ model GraceFill {
 enum Role {
   USER
   ADMIN
+}
+
+enum ScheduleType {
+  DAILY
+  WEEKLY
+  INTERVAL
+}
+
+enum LogKind {
+  CHECKIN
+  UNDO
 }
 
 

@@ -1,34 +1,27 @@
 import { prisma } from '../app';
 import { FindHabit } from './habitServices';
 import * as checkinRepository from '../repositories/checkinRepository';
-import type { Habit } from '../generated/prisma/client';
+import type { Habit, HabitSchedule } from '../generated/prisma/client';
+import { getDateOnlyInTimezone } from '../utils/date';
 
 const GRACE_TOKENS_CAP = 3;
 
-function getDateOnlyInTimezone(instant: Date, timezone: string): Date {
-    const formatted = new Intl.DateTimeFormat('en-CA', {
-        timeZone: timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-    }).format(instant);
+type Contiguity = (earlier: Date, later: Date) => boolean;
 
-    return new Date(`${formatted}T00:00:00.000Z`);
-}
-
-function addDays(date: Date, days: number): Date {
-    const result = new Date(date);
-    result.setUTCDate(result.getUTCDate() + days);
-    return result;
-}
-
-function isNextDay(earlier: Date, later: Date): boolean {
-    return addDays(earlier, 1).getTime() === later.getTime();
+// dois dias contam como contíguos pra streak se nenhum dia-alvo (pelo
+// schedule vigente em cada dia do meio) foi pulado entre eles — não é
+// mais "exatamente 1 dia de calendário", porque WEEKLY/INTERVAL têm
+// dias-alvo não-adjacentes no calendário.
+function buildContiguity(schedules: HabitSchedule[]): Contiguity {
+    return (earlier, later) => checkinRepository.targetDaysBetween(schedules, earlier, later).length === 0;
 }
 
 // streak atual: sem janela fixa, conta a sequência contígua mais recente
 // (a "cauda" das datas distintas), pare no primeiro gap.
-function computeTailStreak(datesDesc: Date[]): { length: number; startDate: Date | null } {
+function computeTailStreak(
+    datesDesc: Date[],
+    isContiguous: Contiguity,
+): { length: number; startDate: Date | null } {
     if (datesDesc.length === 0) {
         return { length: 0, startDate: null };
     }
@@ -37,7 +30,7 @@ function computeTailStreak(datesDesc: Date[]): { length: number; startDate: Date
     let startDate = datesDesc[0];
 
     for (let i = 1; i < datesDesc.length; i++) {
-        if (isNextDay(datesDesc[i], datesDesc[i - 1])) {
+        if (isContiguous(datesDesc[i], datesDesc[i - 1])) {
             length++;
             startDate = datesDesc[i];
         } else {
@@ -50,7 +43,10 @@ function computeTailStreak(datesDesc: Date[]): { length: number; startDate: Date
 
 // recorde histórico: varre o log inteiro. Só é chamado quando um undo
 // mexe na sequência que hoje detém o longestStreak (ver docs/problems).
-function recalculateLongestStreak(datesAsc: Date[]): { length: number; startDate: Date | null } {
+function recalculateLongestStreak(
+    datesAsc: Date[],
+    isContiguous: Contiguity,
+): { length: number; startDate: Date | null } {
     if (datesAsc.length === 0) {
         return { length: 0, startDate: null };
     }
@@ -61,7 +57,7 @@ function recalculateLongestStreak(datesAsc: Date[]): { length: number; startDate
     let runStart = datesAsc[0];
 
     for (let i = 1; i < datesAsc.length; i++) {
-        if (isNextDay(datesAsc[i - 1], datesAsc[i])) {
+        if (isContiguous(datesAsc[i - 1], datesAsc[i])) {
             runLength++;
         } else {
             runLength = 1;
@@ -112,27 +108,30 @@ export async function CreateCheckIn(habitId: string, ownerId: string) {
     }
 
     const today = getDateOnlyInTimezone(new Date(), owner.timezone);
+    const schedules = await checkinRepository.getScheduleVersions(habitId);
+    const isContiguous = buildContiguity(schedules);
+    const currentSchedule = schedules.find((s) => s.effectiveTo === null) ?? null;
 
-    const datesAscBefore = await checkinRepository.getEffectiveLog(habitId);
+    const datesAscBefore = await checkinRepository.getEffectiveLog(habitId, schedules);
     const lastDate = datesAscBefore[datesAscBefore.length - 1] ?? null;
 
     let graceTokens = await replenishGraceTokens(habit);
 
-    // gap de exatamente 1 dia (hoje = último dia + 2) consome 1 token,
-    // gravando o dia pulado em GraceFill pra ele contar como contíguo
-    // em qualquer recálculo futuro. Gap maior não é perdoável.
-    const isOneDayGap = lastDate !== null && addDays(lastDate, 2).getTime() === today.getTime();
+    // gap de exatamente 1 dia-alvo pulado consome 1 token, gravando o
+    // dia em GraceFill pra ele contar como contíguo em qualquer
+    // recálculo futuro. Gap de 2+ dias-alvo não é perdoável.
+    const skippedTargetDays = lastDate ? checkinRepository.targetDaysBetween(schedules, lastDate, today) : [];
 
-    if (isOneDayGap && graceTokens > 0) {
-        await checkinRepository.insertGraceFill(habitId, addDays(lastDate!, 1));
+    if (skippedTargetDays.length === 1 && graceTokens > 0) {
+        await checkinRepository.insertGraceFill(habitId, skippedTargetDays[0]);
         graceTokens -= 1;
         await prisma.habit.update({ where: { id: habitId }, data: { graceTokens } });
     }
 
-    const checkin = await checkinRepository.insertCheckIn(habitId, today);
+    const checkin = await checkinRepository.insertLogEvent(habitId, today, 'CHECKIN');
 
-    const datesAsc = await checkinRepository.getEffectiveLog(habitId);
-    const tail = computeTailStreak([...datesAsc].reverse());
+    const datesAsc = await checkinRepository.getEffectiveLog(habitId, schedules);
+    const tail = computeTailStreak([...datesAsc].reverse(), isContiguous);
     const currentStreak = tail.length;
 
     let longestStreak = habit.longestStreak;
@@ -148,7 +147,12 @@ export async function CreateCheckIn(habitId: string, ownerId: string) {
         });
     }
 
-    return { checkin, currentStreak, longestStreak, graceTokens };
+    // com targetPerDay > 1, o currentStreak fica instável dentro do
+    // dia — o 3º de 4 check-ins não fecha hoje, o 4º fecha.
+    const todayCount = await checkinRepository.getNetCountOnDay(habitId, today);
+    const todayProgress = currentSchedule ? { count: todayCount, target: currentSchedule.targetPerDay } : null;
+
+    return { checkin, currentStreak, longestStreak, graceTokens, todayProgress };
 }
 
 export async function UndoCheckIn(habitId: string) {
@@ -157,28 +161,39 @@ export async function UndoCheckIn(habitId: string) {
         return null;
     }
 
-    const lastLog = await checkinRepository.findMostRecentCheckIn(habitId);
+    const lastLog = await checkinRepository.findUndoableCheckIn(habitId);
     if (!lastLog) {
         return null;
     }
 
-    const tailBefore = computeTailStreak([...(await checkinRepository.getEffectiveLog(habitId))].reverse());
+    const schedules = await checkinRepository.getScheduleVersions(habitId);
+    const isContiguous = buildContiguity(schedules);
+
+    const tailBefore = computeTailStreak(
+        [...(await checkinRepository.getEffectiveLog(habitId, schedules))].reverse(),
+        isContiguous,
+    );
     const undoAffectsRecord =
         habit.longestStreakStartDate !== null &&
         tailBefore.startDate !== null &&
         tailBefore.startDate.getTime() === habit.longestStreakStartDate.getTime();
 
-    await checkinRepository.deleteCheckIn(lastLog.id);
+    // undo é um evento novo (kind: UNDO), não apaga o CHECKIN original.
+    await checkinRepository.insertLogEvent(habitId, lastLog.date, 'UNDO', lastLog.id);
 
     const currentStreak = computeTailStreak(
-        [...(await checkinRepository.getEffectiveLog(habitId))].reverse(),
+        [...(await checkinRepository.getEffectiveLog(habitId, schedules))].reverse(),
+        isContiguous,
     ).length;
 
     let longestStreak = habit.longestStreak;
     let longestStreakStartDate = habit.longestStreakStartDate;
 
     if (undoAffectsRecord) {
-        const recalculated = recalculateLongestStreak(await checkinRepository.getEffectiveLog(habitId));
+        const recalculated = recalculateLongestStreak(
+            await checkinRepository.getEffectiveLog(habitId, schedules),
+            isContiguous,
+        );
         longestStreak = recalculated.length;
         longestStreakStartDate = recalculated.startDate;
 
