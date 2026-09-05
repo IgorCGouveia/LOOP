@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest run",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsc && mkdir -p dist/generated && cp -r src/generated/prisma dist/generated/prisma",
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
