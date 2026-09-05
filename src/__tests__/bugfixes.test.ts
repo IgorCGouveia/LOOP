@@ -128,6 +128,31 @@ describe("Correções de bugs (docs/problems/PROBLEMAS.md)", () => {
                 process.env.SECRET_KEY = original;
             }
         });
+
+        it("500 genérico não vaza error.message; devolve só statusCode/error/reqId", async () => {
+            const original = process.env.SECRET_KEY;
+            delete process.env.SECRET_KEY;
+            try {
+                const res = await app.inject({
+                    method: "POST",
+                    url: "/login",
+                    payload: { email, password },
+                });
+
+                expect(res.statusCode).toBe(500);
+                expect(res.body).not.toContain("Nao existe Secret Key");
+
+                const body = res.json();
+                expect(body).toEqual({
+                    statusCode: 500,
+                    error: "Internal Server Error",
+                    reqId: expect.any(String),
+                });
+                expect(body).not.toHaveProperty("message");
+            } finally {
+                process.env.SECRET_KEY = original;
+            }
+        });
     });
 
     describe("Bug 3 - erro de email duplicado não capturado", () => {
