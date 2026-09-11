@@ -6,6 +6,7 @@ import { habitRoutes } from './routes/HabitRoute';
 import { checkinRoutes } from './routes/CheckinRoute';
 import { LoginRoute } from './routes/indexRoute';
 import { errorHandler } from './Middleware/errorHandler';
+import { registerRateLimit } from './Middleware/rateLimit';
 
 //instância global do Prisma Client(instância unica)
 //pooling
@@ -18,7 +19,10 @@ export function buildApp(){
 
 
     //inicia o fastify com logging
-     const server = Fastify({logger: true});
+    // trustProxy: true — Render é hop único de proxy; sem isso o rate limit
+    // de IP vira global
+     const server = Fastify({logger: true, trustProxy: true});
+    registerRateLimit(server);
     server.register(userRoutes);
     server.register(habitRoutes);
     server.register(checkinRoutes);

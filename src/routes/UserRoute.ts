@@ -8,7 +8,10 @@ export async function userRoutes(server: FastifyInstance){
 
 
 
-    server.post("/users", userController.CreateUser);
+    // rate limit por IP — só cadastro, sem conta pra rastrear ainda
+    server.post("/users", {
+        config: { rateLimit: { max: 5, timeWindow: "1 hour" } },
+    }, userController.CreateUser);
 
     server.get("/users", {preHandler: auth.admin}, userController.GetAll);
 

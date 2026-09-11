@@ -7,7 +7,11 @@ export async function LoginRoute(server: FastifyInstance){
 
 
 
-    server.post("/login", LoginControl.login);
+    // rate limit por IP — só filtro de bot burro; a defesa real é o delay
+    // progressivo por conta dentro do handler
+    server.post("/login", {
+        config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+    }, LoginControl.login);
 
 
     

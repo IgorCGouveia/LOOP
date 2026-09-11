@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp, prisma } from "../app";
+import { attemptTracker } from "../services/attemptTracker";
 
 describe("Fluxo completo: criar usuário -> login -> usar token", () => {
     let app: FastifyInstance;
@@ -8,6 +9,8 @@ describe("Fluxo completo: criar usuário -> login -> usar token", () => {
 
     const email = `teste-${Date.now()}@example.com`;
     const password = "senha12345";
+
+    afterEach(() => attemptTracker.reset());
 
     beforeAll(async () => {
         app = buildApp();

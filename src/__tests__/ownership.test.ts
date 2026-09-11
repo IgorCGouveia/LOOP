@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import jwt from "jsonwebtoken";
 import type { FastifyInstance } from "fastify";
 import { buildApp, prisma } from "../app";
+import { attemptTracker } from "../services/attemptTracker";
 
 describe("Ownership (dono vs. não-dono vs. admin)", () => {
     let app: FastifyInstance;
@@ -14,6 +15,8 @@ describe("Ownership (dono vs. não-dono vs. admin)", () => {
     let otherId: string | undefined;
     let otherToken: string;
     let adminToken: string;
+
+    afterEach(() => attemptTracker.reset());
 
     let habitToUpdateId: string;
     let habitToDeleteId: string;

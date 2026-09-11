@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp, prisma } from "../app";
+import { attemptTracker } from "../services/attemptTracker";
 
 describe("Correções de bugs (docs/problems/PROBLEMAS.md)", () => {
     let app: FastifyInstance;
@@ -8,6 +9,9 @@ describe("Correções de bugs (docs/problems/PROBLEMAS.md)", () => {
 
     let userId: string | undefined;
     const email = `bugfix-${Date.now()}@example.com`;
+
+    // evita acumular falhas de login entre os its deste arquivo
+    afterEach(() => attemptTracker.reset());
 
     beforeAll(async () => {
         app = buildApp();

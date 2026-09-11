@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import jwt from "jsonwebtoken";
 import type { FastifyInstance } from "fastify";
 import { buildApp, prisma } from "../app";
+import { attemptTracker } from "../services/attemptTracker";
 
 describe("Gaps de cobertura fechados", () => {
     let app: FastifyInstance;
@@ -13,6 +14,8 @@ describe("Gaps de cobertura fechados", () => {
     let otherUserId: string | undefined;
     let otherUserToken: string;
     let adminToken: string;
+
+    afterEach(() => attemptTracker.reset());
 
     async function createUserAndLogin(email: string) {
         const createRes = await app.inject({
