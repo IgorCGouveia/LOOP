@@ -3,8 +3,7 @@
 A backend REST API for a habit tracker — JWT auth, role-based access control,
 timezone-aware streaks, versioned habit schedules, and layered login
 brute-force defense. Built as a portfolio project, deliberately treated as
-production software, with every non-trivial architectural choice recorded as
-proposal → counter-argument → decision → discarded alternative.
+production software.
 
 [![CI](https://github.com/IgorCGouveia/LOOP/actions/workflows/ci.yml/badge.svg)](https://github.com/IgorCGouveia/LOOP/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
