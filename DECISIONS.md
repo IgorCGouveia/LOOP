@@ -580,3 +580,193 @@ só a 5ª pegava, porque o cálculo usava as falhas já registradas em vez de
 contar a tentativa prestes a acontecer (falhas + 1). Corrigido antes do
 commit; 3 dos 12 testes do tracker validavam a semântica antiga e foram
 reescritos.
+
+---
+
+## 2026-09-12 — Shape de erro uniforme (`{ error, details? }`)
+
+**Contexto:** a API respondia erro em três formatos incompatíveis —
+string crua (401/403/404 dos controllers e do `Auth.ts`), array de
+`{campo, message}` (Zod, 400) e objeto (`{message}` no 409,
+`{statusCode, error, reqId}` no 500/429). Um cliente não tinha como
+escrever um handler de erro único sem antes inspecionar o tipo do corpo.
+Registrado como achado em `docs/problems/PROBLEMAS 12-09-26.md`, item 5.
+
+**Proposta original do usuário:** substituir todo `res.send("string")`
+por um shape único, ex.: `{ error: string }`, em todos os controllers.
+Decidir explicitamente se o 400 de validação Zod (que carrega múltiplos
+problemas, um por campo) entra no mesmo envelope ou fica diferente por
+natureza.
+
+**Decisão final:** todo erro da API sempre tem um campo `error: string`.
+A validação Zod é a única exceção que precisa de granularidade extra —
+em vez de um segundo shape, ganhou um campo adicional dentro do mesmo
+envelope: `{ error: "Dados inválidos.", details: [{campo, message}, …] }`.
+409 (`Prisma P2002`) passou de `{message}` para `{error}`. 500/429 já
+tinham `error` — mantidos como estavam, só uniformizados no nome do
+campo raiz. `Auth.ts` (401/403/500 de token ausente/inválido/config) foi
+incluído mesmo não estando na lista original do spec — é a origem da
+maioria dos 401/403 da API inteira; deixá-lo de fora invalidaria o
+objetivo de uniformidade. Aproveitado pra também não vazar mais "Sem
+chave secreta" no 500 de `Auth.user()` (mesma regra do `errorHandler`
+central pra qualquer 500: nunca detalhe interno no corpo).
+
+**Alternativa descartada:** dar ao erro de validação um shape totalmente
+diferente (ex.: só o array cru, sem campo `error`) — descartada porque
+reintroduz exatamente o problema que motivou a mudança (cliente precisa
+saber de antemão qual endpoint pode devolver formato diferente).
+Reconsiderar só se a API adotar um padrão de mercado (RFC 7807/
+`application/problem+json`) por inteiro — nesse caso a migração seria
+completa, não incremental.
+
+---
+
+## 2026-09-12 — Envelope de sucesso uniforme (`{ message, data }`)
+
+**Contexto:** parte das respostas de sucesso já usava
+`{ message, data }` (`UpdateHabit`/`DeleteHabit`/`UndoCheckIn`), o resto
+devolvia o objeto/array cru (`POST /users`, `POST /login`,
+`POST /habits`, toda listagem). Duas formas concorrentes pro mesmo tipo
+de resposta.
+
+**Proposta original do usuário:** envolver toda resposta de sucesso
+(create, list, get — não só update/delete) no mesmo padrão
+`{ message, data: T }`, com o motivo explícito de facilitar consumo por
+outra entidade/serviço lendo o payload sem precisar saber por endpoint
+se o corpo é objeto cru ou array cru.
+
+**Decisão final:** adotado em toda rota, incluindo as três novas
+(`/refresh`, `/logout`). Mensagens padronizadas no formato "<recurso>
+<ação> com sucesso." (ex.: "Hábito criado com sucesso.",
+"Check-ins encontrados."), corrigindo de passagem duas mensagens com erro
+gramatical que já existiam (`"Dados atualizado"` sem concordância de
+gênero/número, `"Hábito apagado"` sem "com sucesso" como o resto).
+`POST /logout` devolve `data: null` — não há recurso pra retornar, mas o
+shape fica igual a qualquer outra resposta de sucesso, sem exceção.
+
+**Alternativa descartada:** manter as duas formas coexistindo por
+endpoint conforme "faz sentido" caso a caso — é a situação atual, e é
+exatamente o problema que o item existe pra resolver. Reconsiderar só se
+o formato do corpo virar `Content-Type` negociado por cliente (ex.: um
+consumidor que prefira JSON:API), o que não está no radar.
+
+---
+
+## 2026-09-12 — CORS + cookie httpOnly (origem por env var, `credentials: true`)
+
+**Contexto:** a API não tinha CORS configurado — qualquer cliente web em
+domínio diferente seria bloqueado pelo navegador antes mesmo da resposta
+chegar, documentado em `docs/API-REFERENCE.md` como bloqueante pro
+próximo cliente. `API-REFERENCE.md` (11/09) registrava plataforma
+**mobile** como próximo cliente, não web — sem menção a um `loop-web`.
+
+**Proposta original do usuário:** `@fastify/cors` com origem configurável
+por env var (nunca hardcoded, nunca `*`), `credentials: true` porque o
+refresh token (ver entrada seguinte) viaja em cookie `httpOnly`.
+
+**Contra-argumentação:** o spec de CORS+cookie pressupõe cliente web, mas
+a única decisão de cliente registrada até então (`API-REFERENCE.md`,
+11/09) era mobile (React Native/Flutter) — plataforma onde cookie
+`httpOnly` gerenciado por navegador não é o mecanismo natural (o próprio
+doc já apontava secure storage — `expo-secure-store`/`flutter_secure_storage`
+— como candidato pro token no mobile). Implementar a seção inteira em
+cima de cookie sem resolver esse conflito arriscava entregar um refresh
+token que o cliente real não conseguiria usar. Segundo ponto: o spec
+citava "sameSite apropriado (ver nota de trade-off abaixo)" sem a nota
+existir no texto — decisão real deixada em aberto, não só formatação.
+
+**Decisão do usuário, perguntado explicitamente:** (1) o cookie serve só
+um cliente **loop-web** (novo, ainda não criado — citado na seção de
+documentação do próprio spec, "mover API-REFERENCE.md pro repo loop-web
+quando criado"); o mobile decidido em 11/09 fica **sem** refresh por
+enquanto, usando só o accessToken de 1h como hoje. (2) `sameSite: "none"`
++ `secure: true` em produção (loop-web e a API ficam em domínios
+diferentes — `sameSite: "lax"/"strict"` simplesmente não enviaria o
+cookie em request cross-site iniciado por `fetch`), caindo pra
+`sameSite: "lax"` + `secure: false` em dev local (sem HTTPS, "none" seria
+rejeitado pelo navegador de qualquer forma) — decidido por
+`NODE_ENV === "production"` em `src/config/cookies.ts`.
+
+**Motivo:** registrar a lacuna do mobile explicitamente (em vez de deixar
+implícito) evita que uma sessão futura assuma, por engano, que o refresh
+token já cobre os dois clientes.
+
+**Alternativa descartada:** servir os dois clientes desde já (refresh
+por cookie **ou** por corpo/header pro mobile) — mais superfície de API e
+teste, sem cliente nenhum ainda pra validar contra. Reconsiderar quando o
+app mobile existir de fato e precisar de sessão longa.
+
+**Nota de implementação:** origem resolvida em
+`src/Middleware/cors.ts` — `CORS_ORIGIN` (lista separada por vírgula) ou,
+se ausente, default de dev (`localhost:5173`/`localhost:3000`); nunca
+`*`. Validação com navegador real (item 2.3 do spec) fica pendente até o
+`loop-web` existir de fato — não há frontend neste repositório pra testar
+contra.
+
+---
+
+## 2026-09-12 — Refresh token em banco, hash sha256, sem rotação
+
+**Contexto:** login emitia só um accessToken JWT de 1h, sem renovação —
+expirado, o usuário refaz login. `API-REFERENCE.md` já registrava isso
+como limitação conhecida.
+
+**Proposta original do usuário:** modelo `RefreshToken` no Postgres
+(`id`/hash do token — não o valor puro —, `userId`, `expiresAt`,
+`revokedAt` nullable, `createdAt`); `POST /login` também emite refresh
+token e seta cookie `httpOnly`; `POST /refresh` valida contra o banco e
+emite accessToken novo, **sem rotação** (mesmo refresh token continua
+válido); `POST /logout` revoga no banco e limpa o cookie. Duração do
+cookie delegada explicitamente ("7 dias é o padrão de mercado, mas é
+decisão sua").
+
+**Decisão final:** implementado como proposto. `expiresAt = 7 dias`
+(decisão delegada, sem requisito de produto que pedisse outro valor).
+Hash com **sha256** (`node:crypto`), não argon2: argon2 existe pra
+compensar a baixa entropia de senha escolhida por humano — um refresh
+token nasce com 256 bits de entropia aleatória (`randomBytes(32)`), já
+inviável de adivinhar por força bruta; o custo computacional extra do
+argon2 não compraria proteção real, só lentidão em todo `POST /refresh`.
+Escopo limitado ao `loop-web` (ver entrada de CORS acima) — mobile segue
+sem refresh.
+
+**Alternativa descartada:** rotação de refresh token a cada uso (token
+antigo invalidado, novo emitido) — descartada por simplicidade explícita
+do usuário, com o trade-off reconhecido: um token roubado continua válido
+até expirar ou até uma revogação manual (`POST /logout`, ou
+administrativa direto no banco) descobrir o comprometimento. Reconsiderar
+se o produto precisar detectar reuso de token roubado (rotação +
+detecção de reuso é o padrão que cobre esse caso, ao custo de mais
+estado por sessão).
+
+---
+
+## 2026-09-12 — OpenAPI/`@fastify/swagger`: adiado
+
+**Contexto:** nenhuma rota declara `schema` no Fastify hoje — toda
+validação é `.parse()` manual dentro de 4 métodos de controller; 11 dos
+15 endpoints originais não tinham validação de request nenhuma (params
+nunca validados). `@fastify/swagger` gera OpenAPI a partir de schema do
+**Fastify**, não dos Zod soltos do projeto — rodar a lib hoje produziria
+uma casca vazia (15 paths, zero request bodies documentados).
+
+**Proposta original do usuário:** avaliar `@fastify/swagger` gerando
+OpenAPI a partir dos schemas Zod existentes; se adiado, registrar como
+dívida técnica.
+
+**Decisão final:** adiado. Migrar validação de `.parse()` nos
+controllers pra `schema` de rota (via algo como
+`fastify-type-provider-zod`) é um trabalho maior que o resto deste spec,
+e colide de frente com a decisão de shape de erro registrada acima —
+validação do Fastify não lança `ZodError`, então o branch de
+`errorHandler.ts` pra Zod deixaria de disparar pras rotas migradas,
+fragmentando o shape de erro bem no momento em que ele acabou de ser
+unificado. Fazer as duas coisas na mesma sessão sem tempo de validar cada
+uma separadamente é mais risco do que o valor entrega agora.
+
+**Alternativa descartada:** nenhuma — a única alternativa real era "fazer
+agora", descartada pelo motivo acima. Reconsiderar quando (a) o shape de
+erro uniforme já estiver validado em produção por um tempo, e (b) houver
+um cliente de verdade (loop-web) consumindo a API, que se beneficiaria de
+um contrato machine-readable pra gerar tipos/cliente automaticamente —
+hoje ninguém consome a API programaticamente ainda.
